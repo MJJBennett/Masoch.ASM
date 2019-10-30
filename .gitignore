@@ -1,0 +1,4 @@
+_old.asm
+*.o
+*.ex
+output
