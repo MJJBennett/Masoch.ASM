@@ -40,12 +40,6 @@ _main:
     ; Call our get_input function
     call get_input
 
-    mov rax, 0x2000004
-    mov rdi, 1
-    mov rsi, test_msg
-    mov rdx, test_msg_len
-    syscall
-
     ; Exit the program
     mov rax, 0x2000001 ; Exit syscall
     mov rdi, 0 ; argument 1: exit value, 0 for success
@@ -61,24 +55,9 @@ get_input:
     ; Get input into input_var
     call basic_input
 
-    ; RAX currently stores the length of input
-    ; We need to know this - save it temporarily.
-    ; Figured out this syntax from Godbolt and cross-
-    ; checking with error messages. (PTR isn't a thing
-    ; in NASM, as far as I can tell)
-    mov QWORD [rbp-8], rax
-
-    mov rax, 0x2000004
-    mov rdi, 1
-    mov rsi, response
-    mov rdx, response_len
-    syscall
-    
-    mov rax, 0x2000004
-    mov rdi, 1
-    mov rsi, input_var
-    mov rdx, QWORD [rbp-8]
-    syscall
+    ; Print the user input
+    mov rdi, rax
+    call print_input
 
     pop rbp
     ret
@@ -123,6 +102,33 @@ basic_input:
     ; This should leave rax set properly
     ; But for full clarity:
     mov rax, rax
+
+    pop rbp
+    ret
+
+; Prints the content of input_var
+; Length of input_var should be stored in RDI
+print_input:
+    push rbp
+    mov rbp, rsp
+
+    ; Save RDI for use below
+    ; Figured out this syntax from Godbolt and cross-
+    ; checking with error messages. (PTR isn't a thing
+    ; in NASM, as far as I can tell)
+    mov QWORD [rbp-8], rdi
+
+    mov rax, 0x2000004
+    mov rdi, 1
+    mov rsi, response
+    mov rdx, response_len
+    syscall
+
+    mov rax, 0x2000004
+    mov rdi, 1
+    mov rsi, input_var
+    mov rdx, QWORD [rbp-8]
+    syscall
 
     pop rbp
     ret
