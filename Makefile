@@ -1,6 +1,6 @@
-all: clean interpreter
+all: interpreter
 
-.PHONY: clean interpreter all debug
+.PHONY: clean interpreter all debug stage_2.o stage_2_debug.o
 
 stage_2.o:
 	nasm -f macho64 interpreter.asm -o stage_2.o
