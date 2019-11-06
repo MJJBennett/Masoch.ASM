@@ -43,6 +43,9 @@ _main:
     ; Call our get_input function
     call get_input
 
+    ; Call our testing method
+    call trimmed_streq
+
     ; Exit the program
     mov rax, 0x2000001 ; Exit syscall
     mov rdi, 0 ; argument 1: exit value, 0 for success
@@ -145,6 +148,22 @@ trimmed_streq:
     ; Enlightenment!
     push rbp
     mov rbp, rsp
+
+    call print_test
+    call string_tools_test
+
+    pop rbp
+    ret
+
+print_test:
+    push rbp
+    mov rbp, rsp
+
+    mov rax, 0x2000004 ; SYS_WRITE
+    mov rdi, 1 ; STDOUT
+    mov rsi, test_msg ; "Test message!"
+    mov rdx, test_msg_len ; len(test_msg)
+    syscall ; syscall
 
     pop rbp
     ret

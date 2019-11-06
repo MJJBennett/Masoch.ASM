@@ -2,12 +2,12 @@
 ; Defines a limited set of tools for string parsing and comprehension.
 ; Note: The limit is your imagination.
 
-section .data:
+section .data
     ; This message is printed for debugging reasons
-    test_msg_st: db "Test message! [Within st.a]", 0x0a
+    test_msg_st: db "Test message THIS IS A TEST", 0x0a
     test_msg_len_st: equ $-test_msg
 
-section .text:
+section .text
     ; Library code!
 
 string_tools_test:
