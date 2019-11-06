@@ -4,6 +4,9 @@
 ; .text stores actual code we use
 ; A section declaration is preceded by 'section'
 
+; String parsing/comprehension tools
+%include "string_tools.asm"
+
 section .data
     ; db stands for defined byte
     response: db "Input value: "
@@ -117,6 +120,7 @@ print_input:
     ; checking with error messages. (PTR isn't a thing
     ; in NASM, as far as I can tell)
     mov QWORD [rbp-8], rdi
+    ; Note from future: Could also just use push
 
     mov rax, 0x2000004
     mov rdi, 1
@@ -129,6 +133,18 @@ print_input:
     mov rsi, input_var
     mov rdx, QWORD [rbp-8]
     syscall
+
+    pop rbp
+    ret
+
+trimmed_streq:
+    ; Okay, I actually understand how this works now
+    ; Figuring out the stack (properly) is actually a
+    ; fascinating experience, like first coming to an
+    ; understanding of RAII or something like that.
+    ; Enlightenment!
+    push rbp
+    mov rbp, rsp
 
     pop rbp
     ret
