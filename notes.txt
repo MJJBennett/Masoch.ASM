@@ -1,0 +1,6 @@
+# The stack
+
+Push the value of rbp to the stack:
+`push rbp`
+Move the stack pointer into rbp:
+`mov rbp, rsp`

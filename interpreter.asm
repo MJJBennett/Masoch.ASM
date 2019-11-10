@@ -31,6 +31,7 @@ _main:
     mov rdx, 4
     ; Call our testing method
     call streq
+
     mov rdi, 6
     mov rdx, 4
     ; Call our testing method

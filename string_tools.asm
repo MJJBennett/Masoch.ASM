@@ -17,6 +17,9 @@ section .data
     ST_log_streq_1: db "String lengths were the same.", 0x0a
     ST_log_streq_1_len: equ $-ST_log_streq_1
 
+    ST_log_streq_2: db "Ending streq call.", 0x0a
+    ST_log_streq_2_len: equ $-ST_log_streq_2
+
 section .text
     ; Library code!
 
@@ -36,6 +39,7 @@ string_tools_test:
 string_tools_log:
     push rbp
     mov rbp, rsp
+    sub rsp, 18h
 
     mov QWORD [rbp - 8], rsi
     mov QWORD [rbp - 16], rdx
@@ -52,6 +56,15 @@ string_tools_log:
     mov rdx, QWORD [rbp - 16] ;
     syscall ; syscall
 
+    ; So I was trying to debug a rather tough issue
+    ; Was getting some very weird errors. Figured it was
+    ; probably a stack alignment issue (again) and found
+    ; some references that suggested aligning rsp, then
+    ; using movl rbp, rsp to restore it after.
+    ; Turns out NASM is just weird compared to other syntax
+    ; and it's mov rsp, rbp here. Fun! But it works now.
+    ; Summary: mov rsp, rbp = good
+    mov rsp, rbp
     pop rbp
     ret
 
@@ -64,6 +77,12 @@ streq:
     ; Enlightenment!
     push rbp
     mov rbp, rsp
+
+    ; The call pushes the return address onto the stack
+    ; The return address is 8 bytes (64 bits)
+    ; In order to align the stack for future calls, we need:
+    sub rsp, 28h
+    ; I've never done this much abstract hex addition in my life
 
     ; This function will take RAX, RDI as STR1, STR1_len
     ; RSI, RDX as STR2, STR2_len
@@ -96,6 +115,13 @@ streq:
     ; Used here as reference.
     
 streq_end:
+
+    ; Log that we've reached the end of our function
+    mov rsi, ST_log_streq_2
+    mov rdx, ST_log_streq_2_len
+    call string_tools_log
+
+    mov rsp, rbp
     pop rbp
     ret
 
