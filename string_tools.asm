@@ -14,6 +14,9 @@ section .data
     ST_log_call_streq: db "Called streq", 0x0a
     ST_log_call_streq_len: equ $-ST_log_call_streq
 
+    ST_log_streq_1: db "String lengths were the same.", 0x0a
+    ST_log_streq_1_len: equ $-ST_log_streq_1
+
 section .text
     ; Library code!
 
@@ -62,13 +65,6 @@ streq:
     push rbp
     mov rbp, rsp
 
-    mov rsi, ST_log_call_streq
-    mov rdx, ST_log_call_streq_len
-    call string_tools_log
-
-    ; Writing a string equality function
-    ; We need to first find out if the lengths are inequal
-    
     ; This function will take RAX, RDI as STR1, STR1_len
     ; RSI, RDX as STR2, STR2_len
     ; This may or may not be good practice.
@@ -77,6 +73,29 @@ streq:
     mov QWORD [rbp - 24], rsi
     mov QWORD [rbp - 32], rdx
 
+    ; Do a bit of logging.
+    mov rsi, ST_log_call_streq
+    mov rdx, ST_log_call_streq_len
+    call string_tools_log
+
+    ; Writing a string equality function
+    ; We need to first find out if the lengths are inequal
+    mov rax, QWORD [rbp - 16] 
+    mov rdi, QWORD [rbp - 32]
+    cmp rax, rdi
+    jne streq_end
+
+    ; Do a bit more logging (hey, this apparently isn't debuggable,
+    ; have to do what's necessary)
+    mov rsi, ST_log_streq_1
+    mov rdx, ST_log_streq_1_len
+    call string_tools_log
+
+    ; Found this nice document for explaining some really good
+    ; string operations: https://c9x.me/x86/html/file_module_x86_id_279.html
+    ; Used here as reference.
+    
+streq_end:
     pop rbp
     ret
 

@@ -15,6 +15,9 @@ stage_2_debug.o:
 debug: stage_2_debug.o
 	clang stage_2_debug.o debug.out	
 
+combine:
+	nasm -E interpreter.asm | combined.asm
+
 clean: 
 	@rm *.o output || true
 
