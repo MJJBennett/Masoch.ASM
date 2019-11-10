@@ -17,3 +17,14 @@ debug: stage_2_debug.o
 
 clean: 
 	@rm *.o output || true
+
+ex:
+	./output
+
+run:
+	nasm -f macho64 interpreter.asm -o stage_2.o
+	gcc -o output stage_2.o
+	@echo ""
+	./output
+	@rm *.o
+	@rm output

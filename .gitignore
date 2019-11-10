@@ -1,4 +1,3 @@
-_old.asm
 *.o
-*.ex
+ignored/
 output
