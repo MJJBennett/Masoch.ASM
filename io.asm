@@ -95,6 +95,7 @@ print_input:
     ; Figured out this syntax from Godbolt and cross-
     ; checking with error messages. (PTR isn't a thing
     ; in NASM, as far as I can tell)
+    inc rdi ; Don't ask about this
     mov QWORD [rbp-8], rdi
     ; Note from future: Could also just use push
 
