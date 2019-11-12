@@ -181,6 +181,11 @@ streq:
     ; See this nice document for explaining some really good
     ; string operations: https://c9x.me/x86/html/file_module_x86_id_279.html
     ; But for a first implementation, here is recursion.
+
+    ; str1
+    mov r8, QWORD [rbp - 8]
+    ; str2
+    mov r9, QWORD [rbp - 24]
     
 streq_loop:
     ; Check if we have exceeded the maximum length
@@ -191,23 +196,33 @@ streq_loop:
 
     ; We compared the size to our counter. If our size is less
     ; than our counter, we're done - the strings are equal:
-    jl streq_e
+    jle streq_e
     
     ; Otherwise, compare the two arrays at the offset rax
     ; to see if the two characters are equal.
-    mov rdi, QWORD [rbp - 8]
-    mov rsi, QWORD [rbp - 24]
-    movzx rdx, BYTE [rdi + rax]
-    movzx rdi, BYTE [rsi + rax]
-    cmp rdx, rdi
+;    mov rdi, QWORD [rbp - 8]
+;    mov rsi, QWORD [rbp - 24]
+    ; So rdi contains str1, rsi contains str2
+;    movzx rdx, BYTE [rdi + rax]
+;    movzx rdi, BYTE [rsi + rax]
+;    cmp rdx, rdi
+    movzx rsi, BYTE [r8]
+    movzx rdi, BYTE [r9]
+    cmp rsi, rdi
+
     jne streq_ne
 
     ; Increment our counter
     inc QWORD [rbp - 40]
 
+    ; Increment our strings
+    inc r8
+    inc r9
+
     ; More logging
     mov rsi, ST_log_chareq
     mov rdx, ST_log_chareq_len
+    call string_tools_log
 
     ; Continue the loop
     jmp streq_loop
