@@ -62,6 +62,7 @@ basic_input:
 get_input:
     push rbp
     mov rbp, rsp
+    sub rsp, 8h
 
     ; Print the input prompt
     call print_prompt
@@ -69,9 +70,16 @@ get_input:
     ; Get input into input_var
     call basic_input
 
+    ; Save the return value of basic_input
+    mov QWORD [rbp - 8], rax
+
     ; Print the user input
     mov rdi, rax
     call print_input
 
+    ; Restore the return value
+    mov rax, QWORD [rbp - 8]
+
+    mov rsp, rbp
     pop rbp
     ret

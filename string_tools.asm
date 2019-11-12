@@ -20,6 +20,12 @@ section .data
     ST_log_streq_2: db "Ending streq call.", 0x0a
     ST_log_streq_2_len: equ $-ST_log_streq_2
 
+    ST_log_streq_3: db "Strings were inequal.", 0x0a
+    ST_log_streq_3_len: equ $-ST_log_streq_3
+
+    ST_log_streq_4: db "Strings were equal.", 0x0a
+    ST_log_streq_4_len: equ $-ST_log_streq_4
+
 section .text
     ; Library code!
 
@@ -78,11 +84,13 @@ streq:
     push rbp
     mov rbp, rsp
 
-    ; The call pushes the return address onto the stack
-    ; The return address is 8 bytes (64 bits)
-    ; In order to align the stack for future calls, we need:
+    ; Note to self: Understanding of rsp is that upon function
+    ; call rsp is no longer aligned (but is positioned correctly;
+    ; that is, it correctly marks the top of the stack) so we must
+    ; always call `sub rsp, xx8h`, essentially. Because this function
+    ; uses 5 variables and we decide to use 8 bytes for each, we can
+    ; actually store this perfectly and align the stack with:
     sub rsp, 28h
-    ; I've never done this much abstract hex addition in my life
 
     ; This function will take RAX, RDI as STR1, STR1_len
     ; RSI, RDX as STR2, STR2_len
@@ -91,6 +99,8 @@ streq:
     mov QWORD [rbp - 16], rdi
     mov QWORD [rbp - 24], rsi
     mov QWORD [rbp - 32], rdx
+
+    mov QWORD [rbp - 40], 0
 
     ; Do a bit of logging.
     mov rsi, ST_log_call_streq
@@ -102,24 +112,77 @@ streq:
     mov rax, QWORD [rbp - 16] 
     mov rdi, QWORD [rbp - 32]
     cmp rax, rdi
-    jne streq_end
+    jne streq_ne
 
-    ; Do a bit more logging (hey, this apparently isn't debuggable,
-    ; have to do what's necessary)
+    ; Do a bit more logging (My main debugging strategy,
+    ; considering GDB doesn't actually work for some reason)
     mov rsi, ST_log_streq_1
     mov rdx, ST_log_streq_1_len
     call string_tools_log
 
-    ; Found this nice document for explaining some really good
+    ; Note to self: For a serious string comparison, instructions like
+    ; repne scasb, etc are ideal.
+    ; See this nice document for explaining some really good
     ; string operations: https://c9x.me/x86/html/file_module_x86_id_279.html
-    ; Used here as reference.
+    ; But for a first implementation, here is recursion.
+    
+streq_loop:
+    ; Check if we have exceeded the maximum length
+    ; We can't just compare two QWORDS (not sure why, but
+    ; this does appear to be a rule) so instead:
+    mov rax, QWORD [rbp - 40]
+    cmp QWORD [rbp - 16], rax
+
+    ; We compared the size to our counter. If our size is less
+    ; than our counter, we're done - the strings are equal:
+    jl streq_e
+    
+    ; Otherwise, compare the two arrays at the offset rax
+    ; to see if the two characters are equal.
+    mov rdi, QWORD [rbp - 8]
+    mov rsi, QWORD [rbp - 24]
+    mov rdx, BYTE [rdi + rax]
+    cmp rdx, BYTE [rsi + rax]
+    jne streq_ne
+
+    ; Increment our counter
+    inc QWORD [rbp - 40]
+
+    ; Continue the loop
+    jmp streq_loop
+
+streq_e:
+    ; Log string equality.
+    mov rsi, ST_log_streq_4
+    mov rdx, ST_log_streq_4_len
+    call string_tools_log
+
+    ; Strings are equal! Return 1 (true)
+    mov rax, 1
+    jmp streq_end
+
+streq_ne:
+    ; Log string inequality.
+    mov rsi, ST_log_streq_3
+    mov rdx, ST_log_streq_3_len
+    call string_tools_log
+
+    ; Strings are not equal! Return 0 (false)
+    mov rax, 0
+    jmp streq_end
     
 streq_end:
+
+    ; Preserve return value
+    mov QWORD [rbp - 8], rax
 
     ; Log that we've reached the end of our function
     mov rsi, ST_log_streq_2
     mov rdx, ST_log_streq_2_len
     call string_tools_log
+
+    ; Return value
+    mov rax, QWORD [rbp - 8]
 
     mov rsp, rbp
     pop rbp

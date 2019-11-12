@@ -11,6 +11,10 @@
 ; IO tooling
 %include "io.asm"
 
+section .data
+    ttt: db "ThisTest"
+    ttl: equ $-ttt
+
 section .text
     ; Declare our entry point
     ; Note: This nasm, ld, and OS combination seems to 
@@ -24,17 +28,21 @@ _main:
     mov rbp, rsp
     sub rsp, 16
 
-    ; Call our get_input function
-    call get_input
-
-    mov rdi, 4
+    mov rdi, 6
     mov rdx, 4
     ; Call our testing method
     call streq
 
-    mov rdi, 6
-    mov rdx, 4
-    ; Call our testing method
+    ; Call our get_input function
+    call get_input
+    ; RAX contains input length
+    ; input_var contains input buffer
+
+    ; Test if it is the same as our test var 
+    mov rdi, rax 
+    mov rax, input_var
+    mov rsi, ttt
+    mov rdx, ttl
     call streq
 
     ; Exit the program
