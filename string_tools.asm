@@ -26,6 +26,15 @@ section .data
     ST_log_streq_4: db "Strings were equal.", 0x0a
     ST_log_streq_4_len: equ $-ST_log_streq_4
 
+    ST_log_streq_5: db "String lengths were not the same.", 0x0a
+    ST_log_streq_5_len: equ $-ST_log_streq_5
+
+    ST_log_string: db "String: '"
+    ST_log_string_len: equ $-ST_log_string
+
+    ST_log_string_end: db "'", 0x0a
+    ST_log_string_end_len: equ $-ST_log_string_end
+
 section .text
     ; Library code!
 
@@ -74,6 +83,44 @@ string_tools_log:
     pop rbp
     ret
 
+string_tools_log_string:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 18h
+
+    mov QWORD [rbp - 8], rsi
+    mov QWORD [rbp - 16], rdx
+
+    mov rax, 0x2000004 ; SYS_WRITE
+    mov rdi, 1 ; STDOUT
+    mov rsi, ST_log_leadin ; "[String Tools] "
+    mov rdx, ST_log_leadin_len ; len(ST_log_leadin)
+    syscall ; syscall
+
+    mov rax, 0x2000004 ; SYS_WRITE
+    mov rdi, 1 ; STDOUT
+    mov rsi, ST_log_string ; Okay, no more copying the string contents
+    mov rdx, ST_log_string_len ; this is some number
+    syscall ; syscall
+
+    ; Now we write the actual string
+    mov rax, 0x2000004 ; SYS_WRITE
+    mov rdi, 1 ; STDOUT
+    mov rsi, QWORD [rbp - 8] ; 
+    mov rdx, QWORD [rbp - 16] ;
+    syscall ; syscall
+
+    ; And a trailer for a newline! 
+    mov rax, 0x2000004 ; SYS_WRITE
+    mov rdi, 1 ; STDOUT
+    mov rsi, ST_log_string_end
+    mov rdx, ST_log_string_end_len
+    syscall ; syscall
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
 ; String equality
 streq:
     ; Okay, I actually understand how this works now
@@ -106,13 +153,19 @@ streq:
     mov rsi, ST_log_call_streq
     mov rdx, ST_log_call_streq_len
     call string_tools_log
+    mov rsi, QWORD [rbp - 8]
+    mov rdx, QWORD [rbp - 16]
+    call string_tools_log_string
+    mov rsi, QWORD [rbp - 24]
+    mov rdx, QWORD [rbp - 32]
+    call string_tools_log_string
 
     ; Writing a string equality function
     ; We need to first find out if the lengths are inequal
     mov rax, QWORD [rbp - 16] 
     mov rdi, QWORD [rbp - 32]
     cmp rax, rdi
-    jne streq_ne
+    jne streq_len_ne
 
     ; Do a bit more logging (My main debugging strategy,
     ; considering GDB doesn't actually work for some reason)
@@ -141,8 +194,9 @@ streq_loop:
     ; to see if the two characters are equal.
     mov rdi, QWORD [rbp - 8]
     mov rsi, QWORD [rbp - 24]
-    mov rdx, BYTE [rdi + rax]
-    cmp rdx, BYTE [rsi + rax]
+    movzx rdx, BYTE [rdi + rax]
+    movzx rdi, BYTE [rsi + rax]
+    cmp rdx, rdi
     jne streq_ne
 
     ; Increment our counter
@@ -160,6 +214,12 @@ streq_e:
     ; Strings are equal! Return 1 (true)
     mov rax, 1
     jmp streq_end
+
+streq_len_ne:
+    ; Log string length inequality.
+    mov rsi, ST_log_streq_5
+    mov rdx, ST_log_streq_5_len
+    call string_tools_log
 
 streq_ne:
     ; Log string inequality.

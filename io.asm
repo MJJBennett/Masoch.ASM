@@ -55,6 +55,7 @@ basic_input:
     ; This should leave rax set properly
     ; But for full clarity:
     mov rax, rax
+    sub rax, 1
 
     pop rbp
     ret
@@ -81,5 +82,33 @@ get_input:
     mov rax, QWORD [rbp - 8]
 
     mov rsp, rbp
+    pop rbp
+    ret
+
+; Prints the content of input_var
+; Length of input_var should be stored in RDI
+print_input:
+    push rbp
+    mov rbp, rsp
+
+    ; Save RDI for use below
+    ; Figured out this syntax from Godbolt and cross-
+    ; checking with error messages. (PTR isn't a thing
+    ; in NASM, as far as I can tell)
+    mov QWORD [rbp-8], rdi
+    ; Note from future: Could also just use push
+
+    mov rax, 0x2000004
+    mov rdi, 1
+    mov rsi, response
+    mov rdx, response_len
+    syscall
+
+    mov rax, 0x2000004
+    mov rdi, 1
+    mov rsi, input_var
+    mov rdx, QWORD [rbp-8]
+    syscall
+
     pop rbp
     ret
