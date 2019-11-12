@@ -35,6 +35,9 @@ section .data
     ST_log_string_end: db "'", 0x0a
     ST_log_string_end_len: equ $-ST_log_string_end
 
+    ST_log_chareq: db "Found two equal characters.", 0x0a
+    ST_log_chareq_len: equ $-ST_log_chareq
+
 section .text
     ; Library code!
 
@@ -201,6 +204,10 @@ streq_loop:
 
     ; Increment our counter
     inc QWORD [rbp - 40]
+
+    ; More logging
+    mov rsi, ST_log_chareq
+    mov rdx, ST_log_chareq_len
 
     ; Continue the loop
     jmp streq_loop
