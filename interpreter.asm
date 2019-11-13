@@ -12,8 +12,13 @@
 %include "io.asm"
 
 section .data
-    ttt: db "ThisTest"
-    ttl: equ $-ttt
+    ; These are interpreter-specific strings for commands
+    ; Still figuring out what a fast naming scheme would look like
+    ; This is ugly but relatively short
+    it_db_s: db "db"
+    it_db_sl: equ $-it_db_s
+    it_exit_s: db "exit"
+    it_exit_sl: equ $-it_exit_s
 
 section .text
     ; Declare our entry point
@@ -26,25 +31,40 @@ _main:
     ; This appears to be useless alignment but hey
     push rbp
     mov rbp, rsp
-    sub rsp, 16
+    sub rsp, 10h
 
-    mov rdi, 6
-    mov rdx, 4
-    ; Call our testing method
-    call streq
-
+_main_loop:
     ; Call our get_input function
     call get_input
     ; RAX contains input length
     ; input_var contains input buffer
 
+    ; Save RAX
+    mov QWORD [rbp - 8], rax
+
     ; Test if it is the same as our test var 
-    mov rdi, rax 
+    mov rdi, QWORD [rbp - 8]
     mov rax, input_var
-    mov rsi, ttt
-    mov rdx, ttl
+    mov rsi, it_db_s
+    mov rdx, it_db_sl
     call streq
 
+    cmp rax, 1
+    je _main_loop 
+
+    ; Test if it is the same as our test var 
+    mov rdi, QWORD [rbp - 8]
+    mov rax, input_var
+    mov rsi, it_exit_s
+    mov rdx, it_exit_sl
+    call streq
+
+    cmp rax, 1
+    je _main_end 
+
+_main_end:
+    mov rsp, rbp
+    pop rbp
     ; Exit the program
     mov rax, 0x2000001 ; Exit syscall
     mov rdi, 0 ; argument 1: exit value, 0 for success
