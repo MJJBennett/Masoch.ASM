@@ -74,10 +74,17 @@ get_input:
     ; Save the return value of basic_input
     mov QWORD [rbp - 8], rax
 
+    ; Check if we have debug mode enabled
+    mov al, [rel is_db]
+    movzx ecx, al
+    cmp ecx, byte 0x1
+    jne get_input_end
+
     ; Print the user input
     mov rdi, rax
     call print_input
 
+get_input_end:
     ; Restore the return value
     mov rax, QWORD [rbp - 8]
 

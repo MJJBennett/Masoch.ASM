@@ -62,6 +62,12 @@ string_tools_log:
     mov QWORD [rbp - 8], rsi
     mov QWORD [rbp - 16], rdx
 
+    ; Check if we have debug mode enabled
+    mov al, [rel is_db]
+    movzx ecx, al
+    cmp ecx, byte 0x1
+    jne string_tools_log_end
+
     mov rax, 0x2000004 ; SYS_WRITE
     mov rdi, 1 ; STDOUT
     mov rsi, ST_log_leadin ; "[String Tools] "
@@ -82,6 +88,7 @@ string_tools_log:
     ; Turns out NASM is just weird compared to other syntax
     ; and it's mov rsp, rbp here. Fun! But it works now.
     ; Summary: mov rsp, rbp = good
+string_tools_log_end:
     mov rsp, rbp
     pop rbp
     ret
@@ -93,6 +100,12 @@ string_tools_log_string:
 
     mov QWORD [rbp - 8], rsi
     mov QWORD [rbp - 16], rdx
+
+    ; Check if we have debug mode enabled
+    mov al, [rel is_db]
+    movzx ecx, al
+    cmp ecx, byte 0x1
+    jne string_tools_log_string_end
 
     mov rax, 0x2000004 ; SYS_WRITE
     mov rdi, 1 ; STDOUT
@@ -120,11 +133,15 @@ string_tools_log_string:
     mov rdx, ST_log_string_end_len
     syscall ; syscall
 
+string_tools_log_string_end:
     mov rsp, rbp
     pop rbp
     ret
 
+; ;;;;; streq ;;;;; ;
 ; String equality
+; This function will take RAX, RDI as STR1, STR1_len
+; RSI, RDX as STR2, STR2_len
 streq:
     ; Okay, I actually understand how this works now
     ; Figuring out the stack (properly) is actually a
@@ -270,11 +287,49 @@ streq_end:
     pop rbp
     ret
 
+; ;;;;; startswith ;;;;; ;
+; This function will take RAX, RDI as STR1, STR1_len
+; RSI, RDX as STR2, STR2_len
+startswith:
+    push rbp
+    mov rbp, rsp
+
+    ; The basis of startswith is that the second string must be
+    ; at least as long as the first string, then we can call streq
+    ; with that length.
+    ; Pretty simple overall.
+
+    ; Essentially, does RSI start with RAX?
+    ; RSI len must be >= RAX len
+    ; therefore RDX >= RDI
+    cmp rdx, rdi
+    jl startswith_no
+    mov rdx, rdi
+    call streq
+    jmp startswith_end
+
+startswith_no:
+    ; Log string inequality.
+    mov rsi, ST_log_streq_3
+    mov rdx, ST_log_streq_3_len
+    call string_tools_log
+
+    ; Strings are not equal! Return 0 (false)
+    mov rax, 0
+    jmp startswith_end
+
+startswith_end:
+    mov rsp, rbp
+    pop rbp
+    ret
+
 trimmed_streq:
     push rbp
     mov rbp, rsp
 
     ; Ideally this would trim a string then call streq
+    ; This is unimplemented (obviously) and may or may
+    ; not be included in the final product.
 
     pop rbp
     ret

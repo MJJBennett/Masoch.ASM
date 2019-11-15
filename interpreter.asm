@@ -19,6 +19,8 @@ section .data
     it_db_sl: equ $-it_db_s
     it_exit_s: db "exit"
     it_exit_sl: equ $-it_exit_s
+    it_print_s: db "print"
+    it_print_sl: equ $-it_print_s
 
     IT_dbenabled_s: db "Enabling debug mode.", 0x0a
     IT_dbenabled_sl: equ $-IT_dbenabled_s
@@ -62,7 +64,7 @@ _main_loop:
     cmp rax, 1
     je _main_toggle_debug 
 
-    ; Test if it is the same as our test var 
+    ; Exit the program?
     mov rdi, QWORD [rbp - 8]
     mov rax, input_var
     mov rsi, it_exit_s
@@ -72,20 +74,31 @@ _main_loop:
     cmp rax, 1
     je _main_end 
 
+    ; Print something? (WIP)
+    mov rdi, QWORD [rbp - 8]
+    mov rax, input_var
+    mov rsi, it_print_s
+    mov rdx, it_print_sl
+
+    ; We've reached the end of our main loop.
+    jmp _main_loop
+
 _main_toggle_debug:
-    cmp 1, [is_db]
+    mov al, [rel is_db]
+    movzx ecx, al
+    cmp ecx, byte 0x1
     jne _main_enable_debug
 _main_disable_debug:
     mov rsi, IT_dbdisabled_s
     mov rdx, IT_dbdisabled_sl
     call interpreter_log
-    mov is_db, 0
+    mov byte [rel is_db], 0x0
     jmp _main_loop
 _main_enable_debug:
     mov rsi, IT_dbenabled_s
     mov rdx, IT_dbenabled_sl
     call interpreter_log
-    mov is_db, 1
+    mov byte [rel is_db], 0x1
     jmp _main_loop
 
 _main_end:
