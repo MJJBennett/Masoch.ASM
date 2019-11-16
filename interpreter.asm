@@ -25,6 +25,10 @@ section .data
     it_exit_sl: equ $-it_exit_s
     it_print_s: db "print"
     it_print_sl: equ $-it_print_s
+    it_writefunc_s: db "write"
+    it_writefunc_sl: equ $-it_writefunc_s
+    it_executefunc_s: db "execute"
+    it_executefunc_sl: equ $-it_executefunc_s
 
     IT_dbenabled_s: db "Enabling debug mode.", 0x0a
     IT_dbenabled_sl: equ $-IT_dbenabled_s
@@ -33,6 +37,19 @@ section .data
 
     IT_log_leadin: db "[Interpreter] "
     IT_log_leadin_len: equ $-IT_log_leadin
+
+    itexfs: db "Executing the function.", 0x0a
+    itexfsl: equ $-itexfs
+    itwrfs: db "Writing a function.", 0x0a
+    itwrfsl: equ $-itwrfs
+
+    itnop: db "Skipping no-op.", 0x0a
+    itnopl: equ $-itnop
+
+    itexs: db "Executing '"
+    itexsl: equ $-itexs
+    itexsend: db "'", 0x0a
+    itexsendl: equ $-itexsend
 
     is_db: db 1
 
@@ -57,10 +74,6 @@ _main_loop:
     ; Save RAX (length of input)
     mov QWORD [rbp - 8], rax
 
-    mov rax, input_var
-    mov rdi, QWORD [rbp - 8]
-    call execute
-
     ; Exit the program?
     mov rax, input_var
     mov rdi, QWORD [rbp - 8]
@@ -71,7 +84,47 @@ _main_loop:
     cmp rax, 1
     je _main_end 
 
+    ; Write a function?
+    mov rax, input_var
+    mov rdi, QWORD [rbp - 8]
+    mov rsi, it_writefunc_s
+    mov rdx, it_writefunc_sl
+    call streq
+
+    cmp rax, 1
+    je _main_writef 
+
+    ; Execute a function?
+    mov rax, input_var
+    mov rdi, QWORD [rbp - 8]
+    mov rsi, it_executefunc_s
+    mov rdx, it_executefunc_sl
+    call streq
+
+    cmp rax, 1
+    je _main_execf
+
+    mov rax, input_var
+    mov rdi, QWORD [rbp - 8]
+    call execute
+
     ; We've reached the end of our main loop.
+    jmp _main_loop
+
+    ; Interpreter: Execute the function
+_main_execf:
+    mov rsi, itexfs
+    mov rdx, itexfsl
+    call interpreter_log
+    call call_function
+    jmp _main_loop
+
+    ; Interpreter: Create the function
+_main_writef:
+    mov rsi, itwrfs
+    mov rdx, itwrfsl
+    call interpreter_log
+    call define_func
     jmp _main_loop
 
     ; Interpreter: Finish execution
@@ -92,6 +145,13 @@ execute:
     mov QWORD [rbp - 8], rax
     mov QWORD [rbp - 16], rdi
 
+    cmp rdi, 0
+    je execute_nop
+
+    mov rsi, rax
+    mov rdx, rdi
+    call executor_log
+
     ; Enable debug mode?
     mov rax, QWORD [rbp - 8]
     mov rdi, QWORD [rbp - 16]
@@ -107,8 +167,8 @@ execute:
     ; startswith(x=RSI,x_len=RDX,y=RAX,y_len=RDI)
     mov rax, it_print_s
     mov rdi, it_print_sl
-    mov rsi, input_var 
-    mov rdx, QWORD [rbp - 8]
+    mov rsi, QWORD [rbp - 8]
+    mov rdx, QWORD [rbp - 16]
     call startswith
 
     cmp rax, 1
@@ -157,6 +217,12 @@ execute_print:
     call printnof ; Print it
 
     jmp execute_end
+
+execute_nop:
+    ; Oh hey, it's not actually a no-op
+    mov rsi, itnop
+    mov rdx, itnopl
+    call interpreter_log
 
 execute_end:
     mov rsp, rbp

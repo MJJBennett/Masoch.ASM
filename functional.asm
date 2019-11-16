@@ -14,6 +14,13 @@ section .data
 section .bss
     ; Just close your eyes for this
     ; It isn't pretty
+
+    ; I'm thinking about this about one hour after this implementation
+    ; Realizing I could just store a single buffer for each
+    ; function and then a list of offsets for each command entered
+    ; This would allow more variable function lengths
+    ; but more importantly make the code way shorter (as all the call/write
+    ; logic would be handled by a loop referencing the last offset)
     func_1 resb 256
     func_2 resb 256
     func_3 resb 256
@@ -46,6 +53,7 @@ define_func:
     mov rsi, func_1
     mov rdx, 256
     syscall
+    dec rax
     mov QWORD [rel func_1_len], rax
 
     call print_func_prompt
@@ -54,6 +62,7 @@ define_func:
     mov rsi, func_2
     mov rdx, 256
     syscall
+    dec rax
     mov QWORD [rel func_2_len], rax
 
     call print_func_prompt
@@ -62,6 +71,7 @@ define_func:
     mov rsi, func_3
     mov rdx, 256
     syscall
+    dec rax
     mov QWORD [rel func_3_len], rax
 
     call print_func_prompt
@@ -70,6 +80,7 @@ define_func:
     mov rsi, func_4
     mov rdx, 256
     syscall
+    dec rax
     mov QWORD [rel func_4_len], rax
 
     call print_func_prompt
@@ -78,6 +89,7 @@ define_func:
     mov rsi, func_5
     mov rdx, 256
     syscall
+    dec rax
     mov QWORD [rel func_5_len], rax
 
     call print_func_prompt
@@ -86,6 +98,7 @@ define_func:
     mov rsi, func_6
     mov rdx, 256
     syscall
+    dec rax
     mov QWORD [rel func_6_len], rax
 
     call print_func_prompt
@@ -94,6 +107,7 @@ define_func:
     mov rsi, func_7
     mov rdx, 256
     syscall
+    dec rax
     mov QWORD [rel func_7_len], rax
 
     call print_func_prompt
@@ -102,6 +116,7 @@ define_func:
     mov rsi, func_8
     mov rdx, 256
     syscall
+    dec rax
     mov QWORD [rel func_8_len], rax
 
     mov rsp, rbp
@@ -112,7 +127,30 @@ call_function:
     push rbp
     mov rbp, rsp
     
-     
+    mov rax, func_1
+    mov rdi, [rel func_1_len]
+    call execute
+    mov rax, func_2
+    mov rdi, [rel func_2_len]
+    call execute
+    mov rax, func_3
+    mov rdi, [rel func_3_len]
+    call execute
+    mov rax, func_4
+    mov rdi, [rel func_4_len]
+    call execute
+    mov rax, func_5
+    mov rdi, [rel func_5_len]
+    call execute
+    mov rax, func_6
+    mov rdi, [rel func_6_len]
+    call execute
+    mov rax, func_7
+    mov rdi, [rel func_7_len]
+    call execute
+    mov rax, func_8
+    mov rdi, [rel func_8_len]
+    call execute
     
     mov rsp, rbp
     pop rbp

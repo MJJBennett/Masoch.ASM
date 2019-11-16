@@ -32,3 +32,46 @@ interpreter_log_end:
     mov rsp, rbp
     pop rbp
     ret
+
+executor_log:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 18h
+
+    mov QWORD [rbp - 8], rsi
+    mov QWORD [rbp - 16], rdx
+
+    ; Check if we have debug mode enabled
+    mov al, [rel is_db]
+    movzx ecx, al
+    cmp ecx, byte 0x1
+    jne executor_log_end
+
+    mov rax, 0x2000004
+    mov rdi, 1
+    mov rsi, IT_log_leadin
+    mov rdx, IT_log_leadin_len
+    syscall
+
+    mov rax, 0x2000004
+    mov rdi, 1
+    mov rsi, itexs
+    mov rdx, itexsl
+    syscall
+
+    mov rax, 0x2000004
+    mov rdi, 1
+    mov rsi, QWORD [rbp - 8]
+    mov rdx, QWORD [rbp - 16]
+    syscall
+
+    mov rax, 0x2000004
+    mov rdi, 1
+    mov rsi, itexsend
+    mov rdx, itexsendl
+    syscall
+    
+executor_log_end:
+    mov rsp, rbp
+    pop rbp
+    ret
