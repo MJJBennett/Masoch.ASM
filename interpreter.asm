@@ -10,6 +10,10 @@
 %include "constants.asm"
 ; IO tooling
 %include "io.asm"
+; Function definition
+%include "functional.asm"
+; Loggging
+%include "logging.asm"
 
 section .data
     ; These are interpreter-specific strings for commands
@@ -40,7 +44,6 @@ section .text
     global _main
 
 _main:
-    ; This appears to be useless alignment but hey
     push rbp
     mov rbp, rsp
     sub rsp, 10h
@@ -54,15 +57,9 @@ _main_loop:
     ; Save RAX (length of input)
     mov QWORD [rbp - 8], rax
 
-    ; Enable debug mode?
     mov rax, input_var
     mov rdi, QWORD [rbp - 8]
-    mov rsi, it_db_s
-    mov rdx, it_db_sl
-    call streq
-
-    cmp rax, 1
-    je _main_toggle_debug 
+    call execute
 
     ; Exit the program?
     mov rax, input_var
@@ -74,59 +71,7 @@ _main_loop:
     cmp rax, 1
     je _main_end 
 
-    ; Print something?
-    ; startswith: does x start with y?
-    ; startswith(x=RSI,x_len=RDX,y=RAX,y_len=RDI)
-    mov rax, it_print_s
-    mov rdi, it_print_sl
-    mov rsi, input_var 
-    mov rdx, QWORD [rbp - 8]
-    call startswith
-
-    cmp rax, 1
-    je _main_print 
-
     ; We've reached the end of our main loop.
-    jmp _main_loop
-
-    ; Interpreter: Toggle debug mode
-_main_toggle_debug:
-    mov al, [rel is_db]
-    movzx ecx, al
-    cmp ecx, byte 0x1
-    jne _main_enable_debug
-_main_disable_debug:
-    mov rsi, IT_dbdisabled_s
-    mov rdx, IT_dbdisabled_sl
-    call interpreter_log
-    mov byte [rel is_db], 0x0
-    jmp _main_loop
-_main_enable_debug:
-    mov rsi, IT_dbenabled_s
-    mov rdx, IT_dbenabled_sl
-    call interpreter_log
-    mov byte [rel is_db], 0x1
-    jmp _main_loop
-
-    ; Interpreter: Print something
-_main_print:
-    ; Print syntax is simple:
-    ; print [...]
-    ; In order to make things nice, we need to ensure
-    ; that the length of the input string is at least
-    ; 7, which requires at least one character following
-    ; the whitespace that will be printed.
-    mov rax, QWORD [rbp - 8]
-    cmp rax, 7
-    jl _main_loop ; 7 or less characters, reloop.
-    ; Otherwise, we can just go ahead and print that string
-    ; Load the address of input_var+6 (to skip "print ")
-    lea rsi, [rel input_var + 6] ; really happy to actually use lea
-    ; The length is the length of the input, less 6
-    mov rdx, QWORD [rbp - 8]
-    sub rdx, 6 
-    call printnof ; Print it
-
     jmp _main_loop
 
     ; Interpreter: Finish execution
@@ -138,33 +83,82 @@ _main_end:
     mov rdi, 0 ; argument 1: exit value, 0 for success
     syscall
 
-interpreter_log:
+execute:
+    ; Execute a function within the interpreter
     push rbp
     mov rbp, rsp
-    sub rsp, 18h
+    sub rsp, 28h 
 
-    mov QWORD [rbp - 8], rsi
-    mov QWORD [rbp - 16], rdx
+    mov QWORD [rbp - 8], rax
+    mov QWORD [rbp - 16], rdi
 
-    ; Check if we have debug mode enabled
+    ; Enable debug mode?
+    mov rax, QWORD [rbp - 8]
+    mov rdi, QWORD [rbp - 16]
+    mov rsi, it_db_s
+    mov rdx, it_db_sl
+    call streq
+
+    cmp rax, 1
+    je execute_toggle_debug
+
+    ; Print something?
+    ; startswith: does x start with y?
+    ; startswith(x=RSI,x_len=RDX,y=RAX,y_len=RDI)
+    mov rax, it_print_s
+    mov rdi, it_print_sl
+    mov rsi, input_var 
+    mov rdx, QWORD [rbp - 8]
+    call startswith
+
+    cmp rax, 1
+    je execute_print 
+
+    ; Okay, we didn't do anything else, just stop
+    jmp execute_end
+
+    ; Interpreter: Toggle debug mode
+execute_toggle_debug:
     mov al, [rel is_db]
     movzx ecx, al
     cmp ecx, byte 0x1
-    jne interpreter_log_end
+    jne execute_enable_debug
+execute_disable_debug:
+    mov rsi, IT_dbdisabled_s
+    mov rdx, IT_dbdisabled_sl
+    call interpreter_log
+    mov byte [rel is_db], 0x0
+    jmp execute_end
+execute_enable_debug:
+    mov rsi, IT_dbenabled_s
+    mov rdx, IT_dbenabled_sl
+    call interpreter_log
+    mov byte [rel is_db], 0x1
+    jmp execute_end
 
-    mov rax, 0x2000004 ; SYS_WRITE
-    mov rdi, 1 ; STDOUT
-    mov rsi, IT_log_leadin ; "[Interpreter] "
-    mov rdx, IT_log_leadin_len ; len(IT_log_leadin)
-    syscall ; syscall
+    ; Interpreter: Print something
+execute_print:
+    ; Print syntax is simple:
+    ; print [...]
+    ; In order to make things nice, we need to ensure
+    ; that the length of the input string is at least
+    ; 7, which requires at least one character following
+    ; the whitespace that will be printed.
+    mov rax, QWORD [rbp - 16]
+    cmp rax, 7
+    jl execute_end ; 7 or less characters, reloop.
+    ; Otherwise, we can just go ahead and print that string
+    ; Load the address of input_var+6 (to skip "print ")
+    mov rax, QWORD [rbp - 8]
+    lea rsi, [rax + 6] ; really happy to actually use lea
+    ; The length is the length of the input, less 6
+    mov rdx, QWORD [rbp - 16]
+    sub rdx, 6 
+    call printnof ; Print it
 
-    mov rax, 0x2000004 ; SYS_WRITE
-    mov rdi, 1 ; STDOUT
-    mov rsi, QWORD [rbp - 8] ; 
-    mov rdx, QWORD [rbp - 16] ;
-    syscall ; syscall
+    jmp execute_end
 
-interpreter_log_end:
+execute_end:
     mov rsp, rbp
     pop rbp
     ret

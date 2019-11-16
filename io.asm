@@ -108,6 +108,11 @@ print_input:
     ; checking with error messages. (PTR isn't a thing
     ; in NASM, as far as I can tell)
     inc rdi ; Don't ask about this
+    ; but actually print_input is only used in a specific 
+    ; scenario where the next byte after the string is
+    ; guaranteed (sort of) to be a newline
+    ; so we increment the length of the string to avoid
+    ; needing to print a newline ourselves.
     mov QWORD [rbp-8], rdi
     ; Note from future: Could also just use push
 
