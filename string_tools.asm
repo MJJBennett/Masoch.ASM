@@ -88,6 +88,10 @@ string_tools_log:
     mov QWORD [rbp - 16], rdx
 
     ; Check if we have debug mode enabled
+    ; Note regarding this check: I figured out
+    ; this calling method by compiling equivalent code
+    ; and disassembling using ndisasm.
+    ; Not sure if this can be optimized.
     mov al, [rel is_db]
     movzx ecx, al
     cmp ecx, byte 0x1
