@@ -51,7 +51,7 @@ _main_loop:
     ; RAX contains input length
     ; input_var contains input buffer
 
-    ; Save RAX
+    ; Save RAX (length of input)
     mov QWORD [rbp - 8], rax
 
     ; Enable debug mode?
@@ -74,8 +74,9 @@ _main_loop:
     cmp rax, 1
     je _main_end 
 
-    ; Print something? (WIP)
-    ; Does RSI (with len RDX) start with RAX (len RDI)
+    ; Print something?
+    ; startswith: does x start with y?
+    ; startswith(x=RSI,x_len=RDX,y=RAX,y_len=RDI)
     mov rax, it_print_s
     mov rdi, it_print_sl
     mov rsi, input_var 
@@ -88,6 +89,7 @@ _main_loop:
     ; We've reached the end of our main loop.
     jmp _main_loop
 
+    ; Interpreter: Toggle debug mode
 _main_toggle_debug:
     mov al, [rel is_db]
     movzx ecx, al
@@ -106,9 +108,7 @@ _main_enable_debug:
     mov byte [rel is_db], 0x1
     jmp _main_loop
 
-    ; As time goes on my comments get shorter
-    ; And the code gets more convoluted
-    ; is this a metaphor for life?
+    ; Interpreter: Print something
 _main_print:
     ; Print syntax is simple:
     ; print [...]
@@ -120,14 +120,16 @@ _main_print:
     cmp rax, 7
     jl _main_loop ; 7 or less characters, reloop.
     ; Otherwise, we can just go ahead and print that string
-    lea rsi, [rel input_var + 6]
+    ; Load the address of input_var+6 (to skip "print ")
+    lea rsi, [rel input_var + 6] ; really happy to actually use lea
+    ; The length is the length of the input, less 6
     mov rdx, QWORD [rbp - 8]
     sub rdx, 6 
-    call printnof
+    call printnof ; Print it
 
-    ; Continue main loop
     jmp _main_loop
 
+    ; Interpreter: Finish execution
 _main_end:
     mov rsp, rbp
     pop rbp
