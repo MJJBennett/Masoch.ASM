@@ -6,8 +6,19 @@ This is a very simple intrepreter written in assembly.
 
 Assembly language used: 64-bit NASM, assembled to the Mach-O binary file format.
 
-Program design: Core program flow in `interpreter.asm`, (some) compile-time constants in `constants.asm`, string tooling in `string_tools.asm`, and user input handling in `io.asm`.
+Program design: Core program flow in `interpreter.asm`, (some) compile-time constants in `constants.asm`, string tooling in `string_tools.asm`, function implementation in `functional.asm`, and user input handling in `io.asm`.
 
+This interpreter supports the following commands:
+
+`exit`: Exits the interpreter.
+
+`print [...]`: Prints the input provided.
+
+`db`: Toggles debug mode. Defaults to on.
+
+`write`: Allows the user to write a function. Only one function may exist at a time. To encourage good coding practices, the maximum number of commands in a function is 8. `exit`, `write`, and `execute` cannot be successfully called from within a function.
+
+`execute`: Calls the currently defined function.
 
 #### References
 
