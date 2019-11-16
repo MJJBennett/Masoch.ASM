@@ -16,6 +16,9 @@
  ST_test_msg: db "String Tools test message.", 0x0a
  ST_test_msg_len: equ $-ST_test_msg
 
+ endline: db 0x0a
+ endline_len: equ $-endline
+
 
  ST_log_leadin: db "[String Tools] "
  ST_log_leadin_len: equ $-ST_log_leadin
@@ -63,6 +66,28 @@ string_tools_test:
  pop rbp
  ret
 
+
+
+
+printnof:
+ push rbp
+ mov rbp, rsp
+ sub rsp, 8h
+
+ mov rax, 0x2000004
+ mov rdi, 1
+ syscall
+
+ mov rax, 0x2000004
+ mov rdi, 1
+ mov rsi, endline
+ mov rdx, endline_len
+ syscall
+
+ mov rsp, rbp
+ pop rbp
+ ret
+
 string_tools_log:
  push rbp
  mov rbp, rsp
@@ -70,6 +95,12 @@ string_tools_log:
 
  mov QWORD [rbp - 8], rsi
  mov QWORD [rbp - 16], rdx
+
+
+ mov al, [rel is_db]
+ movzx ecx, al
+ cmp ecx, byte 0x1
+ jne string_tools_log_end
 
  mov rax, 0x2000004
  mov rdi, 1
@@ -91,6 +122,7 @@ string_tools_log:
 
 
 
+string_tools_log_end:
  mov rsp, rbp
  pop rbp
  ret
@@ -102,6 +134,12 @@ string_tools_log_string:
 
  mov QWORD [rbp - 8], rsi
  mov QWORD [rbp - 16], rdx
+
+
+ mov al, [rel is_db]
+ movzx ecx, al
+ cmp ecx, byte 0x1
+ jne string_tools_log_string_end
 
  mov rax, 0x2000004
  mov rdi, 1
@@ -129,9 +167,13 @@ string_tools_log_string:
  mov rdx, ST_log_string_end_len
  syscall
 
+string_tools_log_string_end:
  mov rsp, rbp
  pop rbp
  ret
+
+
+
 
 
 streq:
@@ -279,9 +321,58 @@ streq_end:
  pop rbp
  ret
 
+
+
+
+
+startswith:
+ push rbp
+ mov rbp, rsp
+ sub rsp, 28h
+
+
+ mov QWORD [rbp - 8], rax
+ mov QWORD [rbp - 16], rdi
+ mov QWORD [rbp - 24], rsi
+ mov QWORD [rbp - 32], rdx
+
+
+
+
+
+
+
+
+
+ cmp rdx, rdi
+ jl startswith_no
+ mov rax, QWORD [rbp - 8]
+ mov rdi, QWORD [rbp - 16]
+ mov rsi, QWORD [rbp - 24]
+ mov rdx, rdi
+ call streq
+ jmp startswith_end
+
+startswith_no:
+
+ mov rsi, ST_log_streq_3
+ mov rdx, ST_log_streq_3_len
+ call string_tools_log
+
+
+ mov rax, 0
+ jmp startswith_end
+
+startswith_end:
+ mov rsp, rbp
+ pop rbp
+ ret
+
 trimmed_streq:
  push rbp
  mov rbp, rsp
+
+
 
 
 
@@ -384,9 +475,20 @@ get_input:
  mov QWORD [rbp - 8], rax
 
 
+ mov al, [rel is_db]
+ movzx ecx, al
+ cmp ecx, byte 0x1
+ jne get_input_end
+
+
+
+ mov rax, QWORD [rbp - 8]
+
+
  mov rdi, rax
  call print_input
 
+get_input_end:
 
  mov rax, QWORD [rbp - 8]
 
@@ -399,6 +501,7 @@ get_input:
 print_input:
  push rbp
  mov rbp, rsp
+ sub rsp, 8h
 
 
 
@@ -420,6 +523,7 @@ print_input:
  mov rdx, QWORD [rbp-8]
  syscall
 
+ mov rsp, rbp
  pop rbp
  ret
 %line 13+1 interpreter.asm
@@ -432,6 +536,18 @@ print_input:
  it_db_sl: equ $-it_db_s
  it_exit_s: db "exit"
  it_exit_sl: equ $-it_exit_s
+ it_print_s: db "print"
+ it_print_sl: equ $-it_print_s
+
+ IT_dbenabled_s: db "Enabling debug mode.", 0x0a
+ IT_dbenabled_sl: equ $-IT_dbenabled_s
+ IT_dbdisabled_s: db "Disabling debug mode.", 0x0a
+ IT_dbdisabled_sl: equ $-IT_dbdisabled_s
+
+ IT_log_leadin: db "[Interpreter] "
+ IT_log_leadin_len: equ $-IT_log_leadin
+
+ is_db: db 1
 
 [section .text]
 
@@ -456,24 +572,78 @@ _main_loop:
  mov QWORD [rbp - 8], rax
 
 
- mov rdi, QWORD [rbp - 8]
  mov rax, input_var
+ mov rdi, QWORD [rbp - 8]
  mov rsi, it_db_s
  mov rdx, it_db_sl
  call streq
 
  cmp rax, 1
- je _main_loop
+ je _main_toggle_debug
 
 
- mov rdi, QWORD [rbp - 8]
  mov rax, input_var
+ mov rdi, QWORD [rbp - 8]
  mov rsi, it_exit_s
  mov rdx, it_exit_sl
  call streq
 
  cmp rax, 1
  je _main_end
+
+
+
+ mov rax, it_print_s
+ mov rdi, it_print_sl
+ mov rsi, input_var
+ mov rdx, QWORD [rbp - 8]
+ call startswith
+
+ cmp rax, 1
+ je _main_print
+
+
+ jmp _main_loop
+
+_main_toggle_debug:
+ mov al, [rel is_db]
+ movzx ecx, al
+ cmp ecx, byte 0x1
+ jne _main_enable_debug
+_main_disable_debug:
+ mov rsi, IT_dbdisabled_s
+ mov rdx, IT_dbdisabled_sl
+ call interpreter_log
+ mov byte [rel is_db], 0x0
+ jmp _main_loop
+_main_enable_debug:
+ mov rsi, IT_dbenabled_s
+ mov rdx, IT_dbenabled_sl
+ call interpreter_log
+ mov byte [rel is_db], 0x1
+ jmp _main_loop
+
+
+
+
+_main_print:
+
+
+
+
+
+
+ mov rax, QWORD [rbp - 8]
+ cmp rax, 7
+ jl _main_loop
+
+ lea rsi, [rel input_var + 6]
+ mov rdx, QWORD [rbp - 8]
+ sub rdx, 6
+ call printnof
+
+
+ jmp _main_loop
 
 _main_end:
  mov rsp, rbp
@@ -482,3 +652,34 @@ _main_end:
  mov rax, 0x2000001
  mov rdi, 0
  syscall
+
+interpreter_log:
+ push rbp
+ mov rbp, rsp
+ sub rsp, 18h
+
+ mov QWORD [rbp - 8], rsi
+ mov QWORD [rbp - 16], rdx
+
+
+ mov al, [rel is_db]
+ movzx ecx, al
+ cmp ecx, byte 0x1
+ jne interpreter_log_end
+
+ mov rax, 0x2000004
+ mov rdi, 1
+ mov rsi, IT_log_leadin
+ mov rdx, IT_log_leadin_len
+ syscall
+
+ mov rax, 0x2000004
+ mov rdi, 1
+ mov rsi, QWORD [rbp - 8]
+ mov rdx, QWORD [rbp - 16]
+ syscall
+
+interpreter_log_end:
+ mov rsp, rbp
+ pop rbp
+ ret
