@@ -7,6 +7,9 @@ section .data
     ST_test_msg: db "String Tools test message.", 0x0a
     ST_test_msg_len: equ $-ST_test_msg
 
+    endline: db 0x0a
+    endline_len: equ $-endline
+
     ; Beginning to see why people don't write ASM for fun
     ST_log_leadin: db "[String Tools] "
     ST_log_leadin_len: equ $-ST_log_leadin
@@ -51,6 +54,28 @@ string_tools_test:
     mov rdx, ST_test_msg_len ; len(ST_test_msg)
     syscall ; syscall
 
+    pop rbp
+    ret
+
+; This is like printf
+; Except without the f
+; Print No f
+printnof:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 8h
+
+    mov rax, 0x2000004 ; SYS_WRITE
+    mov rdi, 1 ; STDOUT
+    syscall ; syscall
+
+    mov rax, 0x2000004 ; SYS_WRITE
+    mov rdi, 1 ; STDOUT
+    mov rsi, endline
+    mov rdx, endline_len
+    syscall ; syscall
+
+    mov rsp, rbp
     pop rbp
     ret
 
@@ -290,9 +315,17 @@ streq_end:
 ; ;;;;; startswith ;;;;; ;
 ; This function will take RAX, RDI as STR1, STR1_len
 ; RSI, RDX as STR2, STR2_len
+; Does RSI start with RAX?
 startswith:
     push rbp
     mov rbp, rsp
+    sub rsp, 28h
+
+    ; Save input variables
+    mov QWORD [rbp - 8], rax
+    mov QWORD [rbp - 16], rdi
+    mov QWORD [rbp - 24], rsi
+    mov QWORD [rbp - 32], rdx
 
     ; The basis of startswith is that the second string must be
     ; at least as long as the first string, then we can call streq
@@ -304,6 +337,9 @@ startswith:
     ; therefore RDX >= RDI
     cmp rdx, rdi
     jl startswith_no
+    mov rax, QWORD [rbp - 8]
+    mov rdi, QWORD [rbp - 16]
+    mov rsi, QWORD [rbp - 24]
     mov rdx, rdi
     call streq
     jmp startswith_end

@@ -55,8 +55,8 @@ _main_loop:
     mov QWORD [rbp - 8], rax
 
     ; Enable debug mode?
-    mov rdi, QWORD [rbp - 8]
     mov rax, input_var
+    mov rdi, QWORD [rbp - 8]
     mov rsi, it_db_s
     mov rdx, it_db_sl
     call streq
@@ -65,8 +65,8 @@ _main_loop:
     je _main_toggle_debug 
 
     ; Exit the program?
-    mov rdi, QWORD [rbp - 8]
     mov rax, input_var
+    mov rdi, QWORD [rbp - 8]
     mov rsi, it_exit_s
     mov rdx, it_exit_sl
     call streq
@@ -75,10 +75,15 @@ _main_loop:
     je _main_end 
 
     ; Print something? (WIP)
-    mov rdi, QWORD [rbp - 8]
-    mov rax, input_var
-    mov rsi, it_print_s
-    mov rdx, it_print_sl
+    ; Does RSI (with len RDX) start with RAX (len RDI)
+    mov rax, it_print_s
+    mov rdi, it_print_sl
+    mov rsi, input_var 
+    mov rdx, QWORD [rbp - 8]
+    call startswith
+
+    cmp rax, 1
+    je _main_print 
 
     ; We've reached the end of our main loop.
     jmp _main_loop
@@ -101,6 +106,28 @@ _main_enable_debug:
     mov byte [rel is_db], 0x1
     jmp _main_loop
 
+    ; As time goes on my comments get shorter
+    ; And the code gets more convoluted
+    ; is this a metaphor for life?
+_main_print:
+    ; Print syntax is simple:
+    ; print [...]
+    ; In order to make things nice, we need to ensure
+    ; that the length of the input string is at least
+    ; 7, which requires at least one character following
+    ; the whitespace that will be printed.
+    mov rax, QWORD [rbp - 8]
+    cmp rax, 7
+    jl _main_loop ; 7 or less characters, reloop.
+    ; Otherwise, we can just go ahead and print that string
+    lea rsi, [rel input_var + 6]
+    mov rdx, QWORD [rbp - 8]
+    sub rdx, 6 
+    call printnof
+
+    ; Continue main loop
+    jmp _main_loop
+
 _main_end:
     mov rsp, rbp
     pop rbp
@@ -117,6 +144,12 @@ interpreter_log:
     mov QWORD [rbp - 8], rsi
     mov QWORD [rbp - 16], rdx
 
+    ; Check if we have debug mode enabled
+    mov al, [rel is_db]
+    movzx ecx, al
+    cmp ecx, byte 0x1
+    jne interpreter_log_end
+
     mov rax, 0x2000004 ; SYS_WRITE
     mov rdi, 1 ; STDOUT
     mov rsi, IT_log_leadin ; "[Interpreter] "
@@ -129,6 +162,7 @@ interpreter_log:
     mov rdx, QWORD [rbp - 16] ;
     syscall ; syscall
 
+interpreter_log_end:
     mov rsp, rbp
     pop rbp
     ret
